@@ -1,6 +1,6 @@
 use std::{
-    cmp::{Reverse, max},
-    collections::{BinaryHeap, HashMap},
+    cmp::{Reverse, max, min},
+    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
     hash::Hash,
 };
 
@@ -628,5 +628,476 @@ impl Solution {
     }
 }
 impl Solution {
-    pub fn middle_node(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {}
+    pub fn middle_node_normal_approach(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+        let mut count = 0;
+        let mut current = head.as_ref();
+        while let Some(current_node) = current {
+            count += 1;
+            current = current_node.next.as_ref();
+        }
+        let mid = (count / 2) + 1;
+        let mut current = head;
+        let mut i = 1;
+        while i < mid {
+            if let Some(node) = current.take() {
+                current = node.next;
+            }
+            i += 1;
+        }
+        current
+    }
+    pub fn middle_node(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+        let mut slow_pointer = head.as_ref();
+        let mut fast_pointer = head.as_ref();
+        loop {
+            let fast = match fast_pointer {
+                Some(val) => val,
+                None => break,
+            };
+            let fast_next = match fast.next {
+                Some(ref val) => val,
+                None => break,
+            };
+            fast_pointer = fast_next.next.as_ref();
+            slow_pointer = match slow_pointer {
+                Some(val) => val.next.as_ref(),
+                None => break,
+            }
+        }
+        match slow_pointer {
+            Some(result) => Some(result.clone()),
+            None => None,
+        }
+    }
+}
+
+impl Solution {
+    pub fn contains_duplicate(nums: Vec<i32>) -> bool {
+        let mut seen = HashSet::with_capacity(nums.len());
+
+        for num in nums {
+            if seen.contains(&num) {
+                return true;
+            } else {
+                seen.insert(num);
+            }
+        }
+        false
+    }
+}
+impl Solution {
+    pub fn max_sub_array(nums: Vec<i32>) -> i32 {
+        let mut sum = 0;
+        let mut largest = i32::MIN;
+        for num in nums {
+            sum += num;
+            if num > sum {
+                sum = num;
+            }
+            largest = max(largest, sum);
+        }
+        largest
+    }
+}
+
+impl Solution {
+    pub fn insert(intervals: Vec<Vec<i32>>, new_interval: Vec<i32>) -> Vec<Vec<i32>> {
+        let mut result = Vec::new();
+        let mut new_interval = new_interval;
+        let mut new_interval_added = false;
+        let mut position_found = false;
+
+        for interval in intervals {
+            if position_found {
+                result.push(interval);
+                continue;
+            }
+            if new_interval[1] < interval[0] {
+                result.push(new_interval.clone());
+                result.push(interval);
+
+                new_interval_added = true;
+                position_found = true;
+            } else if new_interval[0] > interval[1] {
+                result.push(interval);
+            } else {
+                new_interval[0] = min(new_interval[0], interval[0]);
+                new_interval[1] = max(new_interval[1], interval[1]);
+            }
+        }
+        if !new_interval_added {
+            result.push(new_interval);
+        }
+        result
+    }
+}
+
+impl Solution {
+    pub fn update_matrix_first_approach(mat: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+        let mut mat = mat;
+        let mut positions = VecDeque::new();
+        for i in 0..mat.len() {
+            for j in 0..mat[0].len() {
+                if mat[i][j] == 0 {
+                    positions.push_back((i, j));
+                }
+            }
+        }
+        let mut nearest_distances_to_zero: HashMap<(usize, usize), usize> = HashMap::new();
+        let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+
+        while let Some((i, j)) = positions.pop_front() {
+            let mut minimum_distance = usize::MAX;
+            for (row_change, column_change) in directions {
+                let new_row = i as i32 + row_change;
+                let new_column = j as i32 + column_change;
+                if new_row < 0
+                    || new_column < 0
+                    || new_row as usize >= mat.len()
+                    || new_column as usize >= mat[0].len()
+                {
+                    continue;
+                }
+                if mat[new_row as usize][new_column as usize] == 0 {
+                    minimum_distance = 0;
+                    continue;
+                }
+                match nearest_distances_to_zero.get(&(new_row as usize, new_column as usize)) {
+                    Some(distance) => {
+                        minimum_distance = min(minimum_distance, *distance);
+                    }
+                    None => {
+                        positions.push_back((new_row as usize, new_column as usize));
+                    }
+                }
+            }
+            let new_distance = if mat[i][j] == 0 {
+                0
+            } else {
+                1 + minimum_distance
+            };
+            nearest_distances_to_zero.insert((i, j), new_distance);
+            mat[i][j] = new_distance as i32;
+        }
+        mat
+    }
+    pub fn update_matrix(mat: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+        let mut mat = mat;
+        let mut positions = VecDeque::new();
+        for i in 0..mat.len() {
+            for j in 0..mat[0].len() {
+                if mat[i][j] == 0 {
+                    positions.push_back((i, j));
+                } else {
+                    mat[i][j] = i32::MAX;
+                }
+            }
+        }
+        let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+
+        while let Some((i, j)) = positions.pop_front() {
+            for (row_change, column_change) in directions {
+                let new_row = i as i32 + row_change;
+                let new_column = j as i32 + column_change;
+                if new_row < 0
+                    || new_column < 0
+                    || new_row as usize >= mat.len()
+                    || new_column as usize >= mat[0].len()
+                {
+                    continue;
+                }
+                if mat[i][j] + 1 < mat[new_row as usize][new_column as usize] {
+                    mat[new_row as usize][new_column as usize] = mat[i][j] + 1;
+
+                    positions.push_back((new_row as usize, new_column as usize));
+                }
+            }
+        }
+        mat
+    }
+}
+impl Solution {
+    pub fn k_closest(points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
+        let mut min_heap = BinaryHeap::new();
+        let mut result = Vec::new();
+        for point in points {
+            let distance = point[0].pow(2) + point[1].pow(2);
+            let point_and_distance = Point {
+                distance: Reverse(distance),
+                coordinates: point,
+            };
+            min_heap.push(point_and_distance);
+        }
+        for _ in 0..k {
+            let item = min_heap.pop().unwrap();
+            result.push(item.coordinates);
+        }
+        result
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
+pub struct Point {
+    distance: Reverse<i32>,
+    coordinates: Vec<i32>,
+}
+
+impl Solution {
+    pub fn length_of_longest_substring_first_approach(s: String) -> i32 {
+        let mut letter_positions = HashMap::new();
+        let mut longest_substr_count = 0;
+        let mut current_substr_count = 0;
+        let mut last_position_with_duplicate = -1;
+        for (index, letter) in s.chars().enumerate() {
+            match letter_positions.insert(letter, index) {
+                Some(first_pos) => {
+                    if (first_pos as i32) < last_position_with_duplicate {
+                        current_substr_count = index - last_position_with_duplicate as usize;
+                    } else {
+                        last_position_with_duplicate = first_pos as i32;
+                        current_substr_count = index - first_pos;
+                    }
+                }
+                None => {
+                    current_substr_count += 1;
+                }
+            }
+            longest_substr_count = max(current_substr_count, longest_substr_count);
+        }
+        longest_substr_count as i32
+    }
+    pub fn length_of_longest_substring(s: String) -> i32 {
+        let mut letters = HashSet::new();
+        let mut longest_substr_count = 0;
+        let mut left = 0;
+        let s = s.chars().collect::<Vec<char>>();
+        for right in 0..s.len() {
+            while letters.contains(&s[right]) {
+                letters.remove(&s[left]);
+                left += 1;
+            }
+            letters.insert(s[right]);
+            longest_substr_count = max(right - left + 1, longest_substr_count);
+        }
+        longest_substr_count as i32
+    }
+}
+impl Solution {
+    pub fn three_sum(nums: Vec<i32>) -> Vec<Vec<i32>> {
+        let mut nums = nums;
+        nums.sort();
+        let mut result = Vec::new();
+        for i in 0..nums.len() {
+            if nums[i] > 0 {
+                break;
+            }
+            if i > 0 && nums[i] == nums[i - 1] {
+                continue;
+            }
+            let difference = 0 - nums[i];
+            let two_sums = Solution::two_sum_for_three_sum(difference, &nums[i + 1..nums.len()]);
+            for mut two_sum in two_sums {
+                two_sum.push(nums[i]);
+                result.push(two_sum);
+            }
+        }
+        result
+    }
+    pub fn two_sum_for_three_sum(target: i32, nums: &[i32]) -> Vec<Vec<i32>> {
+        let mut seen = HashSet::new();
+        let mut result = Vec::new();
+        let mut seen_pairs: HashSet<(i32, i32)> = HashSet::new();
+        for num in nums {
+            let difference = target - num;
+            if seen.contains(&difference) {
+                if seen_pairs.contains(&(difference, *num)) {
+                    continue;
+                }
+                result.push(vec![difference, *num]);
+                seen_pairs.insert((difference, *num));
+            } else {
+                seen.insert(*num);
+            }
+        }
+        result
+    }
+    pub fn two_sum_ii_for_three_sum(target: i32, nums: &[i32]) -> Vec<Vec<i32>> {
+        let mut result = Vec::new();
+        let mut left_pointer = 0;
+        let mut right_pointer = nums.len() - 1;
+
+        while left_pointer < right_pointer {
+            let sum = nums[left_pointer] + nums[right_pointer];
+            if sum == target {
+                result.push(vec![nums[left_pointer], nums[right_pointer]]);
+                left_pointer += 1;
+                while left_pointer < right_pointer && nums[left_pointer] == nums[left_pointer - 1] {
+                    left_pointer += 1;
+                }
+                right_pointer -= 1;
+                while left_pointer < right_pointer && nums[right_pointer] == nums[right_pointer + 1]
+                {
+                    right_pointer -= 1;
+                }
+            } else if sum < target {
+                left_pointer += 1;
+            } else {
+                right_pointer -= 1;
+            }
+        }
+        result
+    }
+}
+impl Solution {
+    pub fn two_sum_ii(numbers: Vec<i32>, target: i32) -> Vec<i32> {
+        let mut left_pointer = 0;
+        let mut right_pointer = numbers.len() - 1;
+
+        while left_pointer <= right_pointer {
+            let sum = numbers[left_pointer] + numbers[right_pointer];
+            if sum == target {
+                return vec![(left_pointer + 1) as i32, (right_pointer + 1) as i32];
+            } else if sum < target {
+                left_pointer += 1;
+            } else {
+                right_pointer -= 1;
+            }
+        }
+        vec![]
+    }
+}
+impl Solution {
+    pub fn level_order(root: Option<Rc<RefCell<TreeNode>>>) -> Vec<Vec<i32>> {
+        let mut traversal = VecDeque::new();
+        traversal.push_back(root);
+        let mut result = Vec::new();
+
+        while !traversal.is_empty() {
+            let traversal_len = traversal.len();
+            let mut level = Vec::with_capacity(traversal_len);
+
+            for _ in 0..traversal_len {
+                let item = traversal.pop_front().unwrap();
+                if let Some(val) = item {
+                    level.push(val.borrow().val);
+                    let left_child = val.borrow_mut().left.take();
+                    let right_child = val.borrow_mut().right.take();
+                    traversal.push_back(left_child);
+                    traversal.push_back(right_child);
+                }
+            }
+            if !level.is_empty() {
+                result.push(level);
+            }
+        }
+        result
+    }
+}
+impl Solution {
+    pub fn eval_rpn(tokens: Vec<String>) -> i32 {
+        let mut operands: Vec<i32> = Vec::new();
+        for token in tokens {
+            if token == "+" {
+                let second_operand = operands.pop().unwrap();
+                let first_operand = operands.pop().unwrap();
+                let sum = first_operand + second_operand;
+                operands.push(sum);
+            } else if token == "-" {
+                let second_operand = operands.pop().unwrap();
+                let first_operand = operands.pop().unwrap();
+                let difference = first_operand - second_operand;
+                operands.push(difference);
+            } else if token == "*" {
+                let second_operand = operands.pop().unwrap();
+                let first_operand = operands.pop().unwrap();
+                let product = first_operand * second_operand;
+                operands.push(product);
+            } else if token == "/" {
+                let second_operand = operands.pop().unwrap();
+                let first_operand = operands.pop().unwrap();
+
+                let divison = first_operand / second_operand;
+                operands.push(divison);
+            } else {
+                let num: i32 = token.parse().unwrap();
+                operands.push(num);
+            }
+        }
+        operands[0]
+    }
+}
+impl Solution {
+    pub fn can_finish(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
+        let mut adjacency_list = vec![vec![]; num_courses as usize];
+        for prerequisite in prerequisites {
+            let course = prerequisite[0];
+            let prerequisite = prerequisite[1];
+            adjacency_list[course as usize].push(prerequisite as usize);
+        }
+        let mut visited_stack = vec![false; num_courses as usize];
+        let mut rec_stack = vec![false; num_courses as usize];
+        for i in 0..num_courses as usize {
+            if Solution::is_cyclic(i, &adjacency_list, &mut visited_stack, &mut rec_stack) {
+                return false;
+            }
+        }
+        true
+    }
+    fn is_cyclic(
+        current_node: usize,
+        adjacency_list: &[Vec<usize>],
+        visited_stack: &mut [bool],
+        rec_stack: &mut [bool],
+    ) -> bool {
+        if rec_stack[current_node] {
+            return true;
+        }
+        if visited_stack[current_node] {
+            return false;
+        }
+        rec_stack[current_node] = true;
+        visited_stack[current_node] = true;
+
+        for neighbour in adjacency_list[current_node].iter() {
+            if Solution::is_cyclic(*neighbour, adjacency_list, visited_stack, rec_stack) {
+                return true;
+            }
+        }
+        rec_stack[current_node] = false;
+        false
+    }
+}
+
+pub struct UnionFind {
+    parent: Vec<usize>,
+    rank: Vec<usize>,
+}
+
+impl UnionFind {
+    pub fn make_set(n: usize) -> Self {
+        let parent = (0..n).collect();
+        let rank = vec![0; n];
+        Self { parent, rank }
+    }
+    pub fn find(&mut self, x: usize) -> usize {
+        if self.parent[x] != x {
+            self.parent[x] = self.find(self.parent[x]);
+        }
+        self.parent[x]
+    }
+    pub fn union(&mut self, x: usize, y: usize) {
+        let root_x = self.find(x);
+        let root_y = self.find(y);
+        if root_x == root_y {
+            return;
+        }
+        if self.rank[x] < self.rank[y] {
+            self.parent[root_y] = root_x;
+        } else if self.rank[y] < self.rank[x] {
+            self.parent[root_x] = root_y;
+        } else {
+            self.parent[root_y] = root_x;
+            self.rank[root_x] += 1;
+        }
+    }
 }
