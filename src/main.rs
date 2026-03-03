@@ -1,7 +1,6 @@
 use std::{
     cmp::{Reverse, max, min},
-    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
-    hash::Hash,
+    collections::{BinaryHeap, HashMap, HashSet, VecDeque, btree_map::Keys},
 };
 
 fn main() {
@@ -1067,37 +1066,95 @@ impl Solution {
         false
     }
 }
+impl Solution {
+    pub fn coin_change(coins: Vec<i32>, amount: i32) -> i32 {
+        let mut amounts_minimum_coins = vec![(amount + 1); (amount + 1) as usize];
+        amounts_minimum_coins[0] = 0;
 
-pub struct UnionFind {
-    parent: Vec<usize>,
-    rank: Vec<usize>,
+        for i in 1..=amount as usize {
+            let mut minimum = amounts_minimum_coins[i];
+            for coin in &coins {
+                if *coin as usize <= i {
+                    let previous = i - *coin as usize;
+                    minimum = min(amounts_minimum_coins[previous], minimum);
+                }
+            }
+            amounts_minimum_coins[i] = 1 + minimum;
+        }
+        if amounts_minimum_coins[amount as usize] > amount {
+            -1
+        } else {
+            amounts_minimum_coins[amount as usize]
+        }
+    }
 }
 
-impl UnionFind {
-    pub fn make_set(n: usize) -> Self {
-        let parent = (0..n).collect();
-        let rank = vec![0; n];
-        Self { parent, rank }
-    }
-    pub fn find(&mut self, x: usize) -> usize {
-        if self.parent[x] != x {
-            self.parent[x] = self.find(self.parent[x]);
+impl Solution {
+    pub fn product_except_self(nums: Vec<i32>) -> Vec<i32> {
+        let mut prefix_product = 1;
+        let mut result = vec![0; nums.len()];
+
+        for i in 0..nums.len() {
+            prefix_product *= nums[i];
+            result[i] = prefix_product;
         }
-        self.parent[x]
-    }
-    pub fn union(&mut self, x: usize, y: usize) {
-        let root_x = self.find(x);
-        let root_y = self.find(y);
-        if root_x == root_y {
-            return;
+        let mut suffix_product = 1;
+
+        let mut i = (nums.len() - 1) as i32;
+
+        while i >= 0 {
+            if i > 0 {
+                result[i as usize] = suffix_product * result[(i - 1) as usize];
+            } else {
+                result[i as usize] = suffix_product;
+            }
+            suffix_product *= nums[i as usize];
+            i -= 1;
         }
-        if self.rank[x] < self.rank[y] {
-            self.parent[root_y] = root_x;
-        } else if self.rank[y] < self.rank[x] {
-            self.parent[root_x] = root_y;
+        result
+    }
+}
+
+struct MinStack {
+    stack: Vec<NodeInMinStack>,
+}
+struct NodeInMinStack {
+    val: i32,
+    min: i32,
+}
+
+/**
+ * `&self` means the method takes an immutable reference.
+ * If you need a mutable reference, change it to `&mut self` instead.
+ */
+impl MinStack {
+    fn new() -> Self {
+        Self { stack: Vec::new() }
+    }
+
+    fn push(&mut self, val: i32) {
+        if self.stack.is_empty() {
+            self.stack.push(NodeInMinStack { val, min: val });
         } else {
-            self.parent[root_y] = root_x;
-            self.rank[root_x] += 1;
+            let previous_min = self.stack[self.stack.len() - 1].min;
+            let new_min = min(previous_min, val);
+            self.stack.push(NodeInMinStack { val, min: new_min });
         }
     }
+
+    fn pop(&mut self) {
+        self.stack.pop();
+    }
+
+    fn top(&self) -> i32 {
+        self.stack[self.stack.len() - 1].val
+    }
+
+    fn get_min(&self) -> i32 {
+        self.stack[self.stack.len() - 1].min
+    }
+}
+
+impl Solution {
+    pub fn is_valid_bst(root: Option<Rc<RefCell<TreeNode>>>) -> bool {}
 }
