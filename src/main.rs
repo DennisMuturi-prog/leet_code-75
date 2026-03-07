@@ -1,6 +1,6 @@
 use std::{
     cmp::{Reverse, max, min},
-    collections::{BinaryHeap, HashMap, HashSet, VecDeque, btree_map::Keys},
+    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
 };
 
 fn main() {
@@ -276,7 +276,7 @@ impl Solution {
             if nums[midpoint] == target {
                 return midpoint as i32;
             } else if target < nums[midpoint] {
-                if ending == 0 {
+                if midpoint == 0 {
                     return -1;
                 }
                 ending = midpoint - 1;
@@ -1156,5 +1156,203 @@ impl MinStack {
 }
 
 impl Solution {
-    pub fn is_valid_bst(root: Option<Rc<RefCell<TreeNode>>>) -> bool {}
+    pub fn is_valid_bst(root: Option<Rc<RefCell<TreeNode>>>) -> bool {
+        let min = None;
+        let max = None;
+        Solution::is_valid_node_bst(root, min, max)
+    }
+    fn is_valid_node_bst(
+        node: Option<Rc<RefCell<TreeNode>>>,
+        min: Option<i32>,
+        max: Option<i32>,
+    ) -> bool {
+        match node {
+            Some(current_node) => {
+                let val = current_node.borrow().val;
+                if let Some(minimum) = min
+                    && val <= minimum
+                {
+                    return false;
+                }
+                if let Some(maximum) = max
+                    && val >= maximum
+                {
+                    return false;
+                }
+
+                let left_child = current_node.borrow_mut().left.take();
+                let right_child = current_node.borrow_mut().right.take();
+
+                if !Solution::is_valid_node_bst(left_child, min, Some(val)) {
+                    return false;
+                }
+                Solution::is_valid_node_bst(right_child, Some(val), max)
+            }
+            None => true,
+        }
+    }
+}
+impl Solution {
+    pub fn num_islands(grid: Vec<Vec<char>>) -> i32 {
+        let mut number_of_islands = 0;
+        let mut grid = grid;
+        for i in 0..grid.len() {
+            for j in 0..grid[0].len() {
+                if grid[i][j] == '1' {
+                    number_of_islands += 1;
+                    Solution::visit_island_parts(&mut grid, i, j);
+                }
+            }
+        }
+
+        number_of_islands
+    }
+    pub fn visit_island_parts(grid: &mut Vec<Vec<char>>, row: usize, column: usize) {
+        grid[row][column] = '2';
+
+        let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+
+        for (row_change, column_change) in directions {
+            let new_row = row as i32 - row_change;
+            let new_column = column as i32 - column_change;
+            if new_row < 0
+                || new_column < 0
+                || new_row as usize >= grid.len()
+                || new_column as usize >= grid[0].len()
+            {
+                continue;
+            }
+            if grid[new_row as usize][new_column as usize] != '1' {
+                continue;
+            }
+
+            Solution::visit_island_parts(grid, new_row as usize, new_column as usize);
+        }
+    }
+}
+impl Solution {
+    pub fn oranges_rotting(grid: Vec<Vec<i32>>) -> i32 {
+        let mut traversal_list = VecDeque::new();
+        let mut empty_cells = 0;
+
+        for i in 0..grid.len() {
+            for j in 0..grid[0].len() {
+                if grid[i][j] == 2 {
+                    traversal_list.push_back((i, j));
+                } else if grid[i][j] == 0 {
+                    empty_cells += 1;
+                }
+            }
+        }
+        let mut no_of_seconds = -1;
+        let mut grid = grid;
+        let mut no_of_rotten_fruits = 0;
+
+        let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+
+        while !traversal_list.is_empty() {
+            let length_of_level = traversal_list.len();
+            no_of_rotten_fruits += length_of_level;
+
+            for _ in 0..length_of_level {
+                let (i, j) = traversal_list.pop_front().unwrap();
+                for (row_change, column_change) in directions {
+                    let new_row = i as i32 - row_change;
+                    let new_column = j as i32 - column_change;
+                    if new_row < 0
+                        || new_column < 0
+                        || new_row as usize >= grid.len()
+                        || new_column as usize >= grid[0].len()
+                    {
+                        continue;
+                    }
+                    if grid[new_row as usize][new_column as usize] != 1 {
+                        continue;
+                    }
+                    grid[new_row as usize][new_column as usize] = 2;
+
+                    traversal_list.push_back((new_row as usize, new_column as usize));
+                }
+            }
+            no_of_seconds += 1;
+        }
+        if no_of_rotten_fruits != (grid.len() * grid[0].len()) - empty_cells {
+            -1
+        } else {
+            if no_of_seconds == -1 {
+                0
+            } else {
+                no_of_seconds
+            }
+        }
+    }
+}
+impl Solution {
+    pub fn search(nums: Vec<i32>, target: i32) -> i32 {
+        let mut left = 0;
+        let mut right = nums.len() - 1;
+
+        while left < right {
+            let mid = left + (right - left) / 2;
+            if nums[mid] > nums[right] {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        let minimum_index = left;
+        if nums[nums.len() - 1] > nums[0] {
+            left = 0;
+            right = nums.len() - 1;
+        } else if target < nums[0] {
+            left = minimum_index;
+            right = nums.len() - 1;
+        } else {
+            left = 0;
+            right = minimum_index.saturating_sub(1);
+        }
+        while left <= right {
+            let midpoint = left + (right - left) / 2;
+            if nums[midpoint] == target {
+                return midpoint as i32;
+            } else if target < nums[midpoint] {
+                if midpoint == 0 {
+                    return -1;
+                }
+                right = midpoint - 1;
+            } else {
+                left = midpoint + 1;
+            }
+        }
+        -1
+    }
+}
+impl Solution {
+    pub fn combination_sum(candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
+        let mut path = Vec::new();
+        let mut paths = Vec::new();
+        Solution::dfs_combination_sum(target,0, &candidates, &mut path, &mut paths);
+
+        paths
+    }
+    pub fn dfs_combination_sum(
+        target: i32,
+        index:usize,
+        candidates: &[i32],
+        path: &mut Vec<i32>,
+        paths: &mut Vec<Vec<i32>>,
+    ) {
+        if target < 0 || index==candidates.len() {
+            return;
+        }
+        if target == 0 {
+            paths.push(path.clone());
+            return;
+        } else {
+            path.push(candidates[index]);
+            Solution::dfs_combination_sum(target-candidates[index], index, candidates, path, paths);
+            path.pop();
+            Solution::dfs_combination_sum(target, index+1, candidates, path, paths);
+        }
+    }
 }
