@@ -267,7 +267,7 @@ impl Solution {
     }
 }
 impl Solution {
-    pub fn search(nums: Vec<i32>, target: i32) -> i32 {
+    pub fn binary_search(nums: Vec<i32>, target: i32) -> i32 {
         let mut starting = 0;
         let mut ending = nums.len() - 1;
 
@@ -1331,28 +1331,231 @@ impl Solution {
     pub fn combination_sum(candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
         let mut path = Vec::new();
         let mut paths = Vec::new();
-        Solution::dfs_combination_sum(target,0, &candidates, &mut path, &mut paths);
+        Solution::dfs_combination_sum(target, 0, &candidates, &mut path, &mut paths);
 
         paths
     }
     pub fn dfs_combination_sum(
         target: i32,
-        index:usize,
+        index: usize,
         candidates: &[i32],
         path: &mut Vec<i32>,
         paths: &mut Vec<Vec<i32>>,
     ) {
-        if target < 0 || index==candidates.len() {
+        if target < 0 || index == candidates.len() {
             return;
         }
         if target == 0 {
             paths.push(path.clone());
-            return;
         } else {
             path.push(candidates[index]);
-            Solution::dfs_combination_sum(target-candidates[index], index, candidates, path, paths);
+            Solution::dfs_combination_sum(
+                target - candidates[index],
+                index,
+                candidates,
+                path,
+                paths,
+            );
             path.pop();
-            Solution::dfs_combination_sum(target, index+1, candidates, path, paths);
+            Solution::dfs_combination_sum(target, index + 1, candidates, path, paths);
         }
+    }
+}
+impl Solution {
+    pub fn permute(nums: Vec<i32>) -> Vec<Vec<i32>> {
+        let mut path = Vec::new();
+        let mut paths = Vec::new();
+        let mut visited = HashSet::new();
+        for num in nums.iter() {
+            Solution::dfs_with_backtrack(*num, &nums, &mut path, &mut paths, &mut visited);
+        }
+
+        paths
+    }
+    pub fn dfs_with_backtrack(
+        val: i32,
+        nums: &Vec<i32>,
+        path: &mut Vec<i32>,
+        paths: &mut Vec<Vec<i32>>,
+        visited: &mut HashSet<i32>,
+    ) {
+        visited.insert(val);
+        path.push(val);
+
+        if path.len() == nums.len() {
+            paths.push(path.clone());
+            path.pop();
+            visited.remove(&val);
+        } else {
+            for num in nums {
+                if !visited.contains(num) {
+                    Solution::dfs_with_backtrack(*num, nums, path, paths, visited);
+                }
+            }
+            path.pop();
+            visited.remove(&val);
+        }
+    }
+}
+impl Solution {
+    pub fn merge(intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+        let mut intervals = intervals;
+        intervals.sort_by_key(|a| a[0]);
+        let mut intervals = intervals.into_iter();
+
+        let mut result = Vec::new();
+        result.push(intervals.next().unwrap());
+        let mut index = 1;
+        for interval in intervals {
+            if interval[0] > result[result.len() - 1][1] {
+                result.push(interval);
+                index += 1;
+            } else {
+                result[index - 1][1] = max(interval[1], result[result.len() - 1][1]);
+            }
+        }
+        result
+    }
+}
+
+impl Solution {
+    pub fn lowest_common_ancestor_binary_tree_first_approach(
+        root: Option<Rc<RefCell<TreeNode>>>,
+        p: Option<Rc<RefCell<TreeNode>>>,
+        q: Option<Rc<RefCell<TreeNode>>>,
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        let p_val = p.unwrap().borrow().val;
+        let q_val = q.unwrap().borrow().val;
+        let mut path = Vec::new();
+        let mut paths = Vec::new();
+        Solution::search_dfs(root, p_val, q_val, &mut path, &mut paths);
+        let mut paths = paths.into_iter();
+        let first_traversal = paths.next().unwrap();
+        let second_traversal = paths.next().unwrap();
+
+        for i in 0..max(first_traversal.len(), second_traversal.len()) {
+            if i >= first_traversal.len() {
+                return second_traversal[i - 1].clone();
+            }
+            if i >= second_traversal.len() {
+                return first_traversal[i - 1].clone();
+            }
+            match first_traversal[i] {
+                Some(ref first) => match second_traversal[i] {
+                    Some(ref second) => {
+                        println!("i is {} first traversal {}", i, first.borrow().val);
+                        println!("second traversal {}", second.borrow().val);
+                        if first.borrow().val != second.borrow().val {
+                            return first_traversal[i - 1].clone();
+                        }
+                    }
+                    None => return first_traversal[i - 1].clone(),
+                },
+                None => return second_traversal[i - 1].clone(),
+            }
+        }
+        None
+    }
+    pub fn search_dfs(
+        node: Option<Rc<RefCell<TreeNode>>>,
+        p_val: i32,
+        q_val: i32,
+        path: &mut Vec<Option<Rc<RefCell<TreeNode>>>>,
+        paths: &mut Vec<Vec<Option<Rc<RefCell<TreeNode>>>>>,
+    ) {
+        path.push(node.clone());
+        if let Some(current_node) = node {
+            let val = current_node.borrow().val;
+            if val == p_val || val == q_val {
+                paths.push(path.clone());
+            }
+            let left = current_node.borrow().left.clone();
+            let right = current_node.borrow().right.clone();
+            Solution::search_dfs(left, p_val, q_val, path, paths);
+            Solution::search_dfs(right, p_val, q_val, path, paths);
+        }
+        path.pop();
+    }
+}
+impl Solution {
+    pub fn lowest_common_ancestor_binary_tree(
+        root: Option<Rc<RefCell<TreeNode>>>,
+        p: Option<Rc<RefCell<TreeNode>>>,
+        q: Option<Rc<RefCell<TreeNode>>>,
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        let p_val = p.unwrap().borrow().val;
+        let q_val = q.unwrap().borrow().val;
+        Solution::lca_binary_tree(root, p_val, q_val)
+    }
+    pub fn lca_binary_tree(
+        root: Option<Rc<RefCell<TreeNode>>>,
+        p_val: i32,
+        q_val: i32,
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        match root{
+            Some(node) => {
+                let val=node.borrow().val;
+                if val==p_val || val==q_val{
+                    return Some(node);
+                }
+                let left=node.borrow().left.clone();
+                let left_result=Solution::lca_binary_tree(left, p_val, q_val);
+                let right=node.borrow().right.clone();
+                let right_result=Solution::lca_binary_tree(right, p_val, q_val);
+                if left_result.is_some() && right_result.is_some(){
+                    return Some(node);
+                }
+                left_result.or(right_result)
+            },
+            None => {
+                None
+            },
+        }
+    }
+   
+}
+struct TimeMap{
+    time_map:HashMap<String,Vec<(i32,String)>>
+}
+
+impl TimeMap {
+
+    fn new() -> Self {
+        Self { time_map: HashMap::new() }
+        
+    }
+    
+    fn set(&mut self, key: String, value: String, timestamp: i32) {
+        self.time_map.entry(key).and_modify(|a|a.push((timestamp,value.clone()))).or_insert(vec![(timestamp,value)]);
+        
+    }
+    
+    fn get(&self, key: String, timestamp: i32) -> String {
+        match self.time_map.get(&key){
+            Some(val) => {
+                let mut left=0;
+                let mut right=(val.len()-1) as i32;
+
+                while left<=right{
+                    let mid=left+(right-left)/2;
+                    if val[mid as usize].0==timestamp{
+                        return val[mid as usize].1.to_string();
+                    }else if val[mid as usize].0<timestamp{
+                        left=mid+1;
+                    }else{
+                        right=mid-1;
+                    }
+                }
+                if right<0{
+                    return "".to_string();
+                }
+                val[right as usize].1.to_string()
+
+
+            },
+            None => "".to_string()
+            
+        }
+        
     }
 }
