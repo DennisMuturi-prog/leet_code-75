@@ -230,6 +230,8 @@ impl TreeNode {
 }
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use leet_code_75::union_find::UnionFind;
 impl Solution {
     pub fn invert_tree(root: Option<Rc<RefCell<TreeNode>>>) -> Option<Rc<RefCell<TreeNode>>> {
         match root {
@@ -1068,7 +1070,7 @@ impl Solution {
 }
 impl Solution {
     pub fn coin_change(coins: Vec<i32>, amount: i32) -> i32 {
-        let mut amounts_minimum_coins = vec![(amount + 1); (amount + 1) as usize];
+        let mut amounts_minimum_coins = vec![amount + 1 ; (amount + 1) as usize];
         amounts_minimum_coins[0] = 0;
 
         for i in 1..=amount as usize {
@@ -1492,70 +1494,549 @@ impl Solution {
         p_val: i32,
         q_val: i32,
     ) -> Option<Rc<RefCell<TreeNode>>> {
-        match root{
+        match root {
             Some(node) => {
-                let val=node.borrow().val;
-                if val==p_val || val==q_val{
+                let val = node.borrow().val;
+                if val == p_val || val == q_val {
                     return Some(node);
                 }
-                let left=node.borrow().left.clone();
-                let left_result=Solution::lca_binary_tree(left, p_val, q_val);
-                let right=node.borrow().right.clone();
-                let right_result=Solution::lca_binary_tree(right, p_val, q_val);
-                if left_result.is_some() && right_result.is_some(){
+                let left = node.borrow().left.clone();
+                let left_result = Solution::lca_binary_tree(left, p_val, q_val);
+                let right = node.borrow().right.clone();
+                let right_result = Solution::lca_binary_tree(right, p_val, q_val);
+                if left_result.is_some() && right_result.is_some() {
                     return Some(node);
                 }
                 left_result.or(right_result)
-            },
-            None => {
-                None
-            },
+            }
+            None => None,
         }
     }
-   
 }
-struct TimeMap{
-    time_map:HashMap<String,Vec<(i32,String)>>
+struct TimeMap {
+    time_map: HashMap<String, Vec<(i32, String)>>,
 }
 
 impl TimeMap {
-
     fn new() -> Self {
-        Self { time_map: HashMap::new() }
-        
+        Self {
+            time_map: HashMap::new(),
+        }
     }
-    
-    fn set(&mut self, key: String, value: String, timestamp: i32) {
-        self.time_map.entry(key).and_modify(|a|a.push((timestamp,value.clone()))).or_insert(vec![(timestamp,value)]);
-        
-    }
-    
-    fn get(&self, key: String, timestamp: i32) -> String {
-        match self.time_map.get(&key){
-            Some(val) => {
-                let mut left=0;
-                let mut right=(val.len()-1) as i32;
 
-                while left<=right{
-                    let mid=left+(right-left)/2;
-                    if val[mid as usize].0==timestamp{
+    fn set(&mut self, key: String, value: String, timestamp: i32) {
+        self.time_map
+            .entry(key)
+            .and_modify(|a| a.push((timestamp, value.clone())))
+            .or_insert(vec![(timestamp, value)]);
+    }
+
+    fn get(&self, key: String, timestamp: i32) -> String {
+        match self.time_map.get(&key) {
+            Some(val) => {
+                let mut left = 0;
+                let mut right = (val.len() - 1) as i32;
+
+                while left <= right {
+                    let mid = left + (right - left) / 2;
+                    if val[mid as usize].0 == timestamp {
                         return val[mid as usize].1.to_string();
-                    }else if val[mid as usize].0<timestamp{
-                        left=mid+1;
-                    }else{
-                        right=mid-1;
+                    } else if val[mid as usize].0 < timestamp {
+                        left = mid + 1;
+                    } else {
+                        right = mid - 1;
                     }
                 }
-                if right<0{
+                if right < 0 {
                     return "".to_string();
                 }
                 val[right as usize].1.to_string()
-
-
-            },
-            None => "".to_string()
-            
+            }
+            None => "".to_string(),
         }
+    }
+}
+
+impl Solution {
+    pub fn accounts_merge_connected_graph_approach(accounts: Vec<Vec<String>>) -> Vec<Vec<String>> {
+        let mut adjacency_list = HashMap::new();
+
+        for i in 0..accounts.len() {
+            let account_name = accounts[i][0].clone();
+            for j in 1..accounts[i].len() {
+                let next = if j == accounts[i].len() - 1 { 1 } else { j + 1 };
+                adjacency_list
+                    .entry(accounts[i][j].clone())
+                    .and_modify(|a: &mut Vec<String>| a.push(accounts[i][next].clone()))
+                    .or_insert(vec![account_name.clone(), accounts[i][next].clone()]);
+            }
+        }
+        let mut visited = HashSet::new();
+        let mut result = Vec::new();
+
+        for (email, val) in adjacency_list.iter() {
+            if !visited.contains(email) {
+                let mut path = Vec::new();
+                Solution::dfs_graph(email, &mut visited, &mut path, &adjacency_list);
+                path.sort();
+                path.insert(0, val[0].clone());
+                result.push(path);
+            }
+        }
+
+        result
+    }
+    pub fn dfs_graph(
+        node: &str,
+        visited: &mut HashSet<String>,
+        path: &mut Vec<String>,
+        adjacency_list: &HashMap<String, Vec<String>>,
+    ) {
+        visited.insert(node.to_string());
+        path.push(node.to_string());
+
+        let children = adjacency_list.get(node).unwrap();
+
+        for i in 1..children.len() {
+            if !visited.contains(&children[i]) {
+                Solution::dfs_graph(&children[i], visited, path, adjacency_list);
+            }
+        }
+    }
+}
+
+impl Solution {
+    pub fn accounts_merge(accounts: Vec<Vec<String>>) -> Vec<Vec<String>> {
+        let mut disjoint_set = UnionFind::make_set(accounts.len());
+        let mut email_map = HashMap::new();
+        let mut account_names = Vec::new();
+        for (index, account) in accounts.iter().enumerate() {
+            account_names.push(&account[0]);
+            for email in account.iter().skip(1) {
+                if let Some(existing_index) = email_map.insert(email, index) {
+                    disjoint_set.union(existing_index, index);
+                }
+            }
+        }
+        let mut result = Vec::new();
+
+        let mut accounts_map: HashMap<usize, Vec<String>> = HashMap::new();
+
+        for (email, index) in email_map {
+            let root = disjoint_set.find(index);
+            accounts_map
+                .entry(root)
+                .and_modify(|a| a.push(email.to_string()))
+                .or_insert(vec![email.to_string()]);
+        }
+        for (index, mut emails) in accounts_map {
+            emails.sort();
+            emails.insert(0, account_names[index].to_string());
+            result.push(emails);
+        }
+        result
+    }
+}
+impl Solution {
+    pub fn sort_colors(nums: &mut Vec<i32>) {
+        let mut count = vec![0; 3];
+
+        for num in nums.iter() {
+            count[*num as usize] += 1;
+        }
+        let mut nums_index = 0;
+
+        for (num, occurrence) in count.into_iter().enumerate() {
+            let mut i = 0;
+            while i < occurrence {
+                nums[nums_index] = num as i32;
+                nums_index += 1;
+                i += 1;
+            }
+        }
+    }
+}
+impl Solution {
+    pub fn word_break_naive_approach(s: String, word_dict: Vec<String>) -> bool {
+        let s: Vec<char> = s.chars().collect();
+        let word_dict: Vec<Vec<char>> = word_dict
+            .iter()
+            .map(|a| a.chars().collect::<Vec<char>>())
+            .collect();
+        for word in &word_dict {
+            if Solution::dfs_word_break(word, &s, &word_dict) {
+                return true;
+            }
+        }
+        false
+    }
+    pub fn dfs_word_break(current_word: &[char], s: &[char], word_dict: &[Vec<char>]) -> bool {
+        if current_word.len() > s.len() {
+            return false;
+        } else {
+            let mut i = 0;
+            while i < current_word.len() {
+                if current_word[i] != s[i] {
+                    return false;
+                }
+                i += 1;
+            }
+            if i >= s.len() {
+                return true;
+            }
+            for word in word_dict {
+                if Solution::dfs_word_break(word, &s[i..], word_dict) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+}
+impl Solution {
+    pub fn word_break(s: String, word_dict: Vec<String>) -> bool {
+        let s_len = s.len();
+        let mut dp = vec![false; s_len + 1];
+        dp[s_len] = true;
+        let mut i = s_len as i32;
+
+        while i >= 0 {
+            let index = i as usize;
+            for word in &word_dict {
+                if word.len() > s_len - index {
+                    continue;
+                }
+                if &s[index..index + word.len()] == word {
+                    dp[index] = dp[index + word.len()];
+                    break;
+                }
+            }
+            i -= 1;
+        }
+        dp[0]
+    }
+}
+impl Solution {
+    pub fn can_partition_naive_approach(nums: Vec<i32>) -> bool {
+        let sum: i32 = nums.iter().sum();
+        if sum % 2 != 0 {
+            return false;
+        }
+        let target = sum / 2;
+        Solution::dfs_can_partition(0, &nums, 0, target)
+    }
+    pub fn dfs_can_partition(index: usize, nums: &[i32], sum: i32, target: i32) -> bool {
+        if sum == target {
+            return true;
+        }
+        if index == nums.len() {
+            return false;
+        }
+        if Solution::dfs_can_partition(index + 1, nums, sum + nums[index], target) {
+            return true;
+        }
+        Solution::dfs_can_partition(index + 1, nums, sum, target)
+    }
+}
+impl Solution {
+    pub fn can_partition(nums: Vec<i32>) -> bool {
+        let sum: i32 = nums.iter().sum();
+        if sum % 2 != 0 {
+            return false;
+        }
+        let mut sums = HashSet::new();
+
+        let target = sum / 2;
+        if nums[nums.len() - 1] == target {
+            return true;
+        }
+
+        sums.insert(0);
+        sums.insert(nums[nums.len() - 1]);
+
+        let mut i = (nums.len() - 2) as i32;
+        while i >= 0 {
+            let index = i as usize;
+            let mut new_sums = Vec::new();
+            for curr_sum in sums.iter() {
+                let new_sum = curr_sum + nums[index];
+                if new_sum == target {
+                    return true;
+                }
+                new_sums.push(new_sum);
+            }
+            for new_sum in new_sums {
+                sums.insert(new_sum);
+            }
+            i -= 1;
+        }
+        false
+    }
+}
+
+impl Solution {
+    pub fn my_atoi(s: String) -> i32 {
+        let s: Vec<char> = s.chars().collect();
+        let mut start = 0;
+        while start < s.len() {
+            if s[start] == '+' || s[start] == '-' || s[start].is_ascii_digit() {
+                break;
+            } else if s[start].is_ascii_alphabetic() {
+                return 0;
+            } else {
+                start += 1;
+            }
+        }
+        if start >= s.len() - 1 {
+            return 0;
+        }
+        let mut end = start;
+
+        while end < s.len() - 1 {
+            if s[end + 1].is_ascii_digit() {
+                end += 1;
+            } else {
+                break;
+            }
+        }
+        let mut sign = '+';
+        if s[0] == '-' || s[0] == '+' {
+            sign = s[0];
+            start += 1;
+        }
+        if end < start {
+            return 0;
+        }
+        let digits: String = s[start..=end].iter().collect();
+        let answer: Result<i32, _> = digits.parse();
+        let digit = match answer {
+            Ok(val) => val,
+            Err(err) => match err.kind() {
+                std::num::IntErrorKind::PosOverflow => i32::MAX,
+                std::num::IntErrorKind::NegOverflow => i32::MIN,
+                _ => 0,
+            },
+        };
+        if sign == '+' { digit } else { -digit }
+    }
+}
+impl Solution {
+    pub fn spiral_order(matrix: Vec<Vec<i32>>) -> Vec<i32> {
+        let mut direction = Direction::Right;
+        let mut row: i32 = 0;
+        let mut column: i32 = 0;
+        let mut seen: HashSet<(usize, usize)> = HashSet::new();
+        let rows = matrix.len();
+        let columns = matrix[0].len();
+        let mut path = Vec::new();
+        while seen.len() < rows * columns {
+            if !seen.contains(&(row as usize, column as usize)) {
+                seen.insert((row as usize, column as usize));
+                path.push(matrix[row as usize][column as usize]);
+            }
+            match direction {
+                Direction::Left => {
+                    if column > 0 && !seen.contains(&(row as usize, (column - 1) as usize)) {
+                        column -= 1;
+                    } else {
+                        direction = Direction::Up;
+                    }
+                }
+                Direction::Right => {
+                    if column + 1 < columns as i32
+                        && !seen.contains(&(row as usize, (column + 1) as usize))
+                    {
+                        column += 1;
+                    } else {
+                        direction = Direction::Down;
+                    }
+                }
+                Direction::Up => {
+                    if row > 0 && !seen.contains(&((row - 1) as usize, column as usize)) {
+                        row -= 1;
+                    } else {
+                        direction = Direction::Right;
+                    }
+                }
+                Direction::Down => {
+                    if row + 1 < rows as i32
+                        && !seen.contains(&((row + 1) as usize, column as usize))
+                    {
+                        row += 1;
+                    } else {
+                        direction = Direction::Left;
+                    }
+                }
+            }
+        }
+        path
+    }
+}
+enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl Solution {
+    pub fn subsets(nums: Vec<i32>) -> Vec<Vec<i32>> {
+        let mut path = Vec::new();
+        let mut paths = vec![vec![]];
+        Solution::dfs_subset(0, &nums, &mut path, &mut paths);
+        paths
+    }
+    pub fn dfs_subset(index: usize, nums: &[i32], path: &mut Vec<i32>, paths: &mut Vec<Vec<i32>>) {
+        if index >= nums.len() {
+            return;
+        }
+        if path.len() == nums.len() {
+            return;
+        }
+        path.push(nums[index]);
+        paths.push(path.clone());
+        Solution::dfs_subset(index + 1, nums, path, paths);
+        path.pop();
+        Solution::dfs_subset(index + 1, nums, path, paths);
+    }
+}
+
+impl Solution {
+    pub fn right_side_view(root: Option<Rc<RefCell<TreeNode>>>) -> Vec<i32> {
+        let mut traversal_list = VecDeque::new();
+        traversal_list.push_back(root);
+        let mut result = Vec::new();
+        while !traversal_list.is_empty() {
+            let traversal_len = traversal_list.len();
+            if let Some(ref node) = traversal_list[traversal_len - 1] {
+                let val = node.borrow().val;
+                result.push(val);
+            }
+            for _ in 0..traversal_len {
+                let current_node = traversal_list.pop_front().unwrap();
+                if let Some(node) = current_node {
+                    let left_child = node.borrow().left.clone();
+                    let right_child = node.borrow().right.clone();
+                    if left_child.is_some() {
+                        traversal_list.push_back(left_child);
+                    }
+                    if right_child.is_some() {
+                        traversal_list.push_back(right_child);
+                    }
+                }
+            }
+        }
+        result
+    }
+}
+impl Solution {
+    pub fn longest_palindromic_substr(s: String) -> String {
+        let s: Vec<char> = s.chars().collect();
+        let mut result = String::new();
+        for i in 0..s.len() {
+            let mut start = i as i32;
+            let mut end = i as i32;
+            while start > 0 {
+                if s[(start - 1) as usize] == s[i] {
+                    start -= 1;
+                } else {
+                    break;
+                }
+            }
+            while end < (s.len() - 1) as i32 {
+                if s[(end + 1) as usize] == s[i] {
+                    end += 1;
+                } else {
+                    break;
+                }
+            }
+
+            loop {
+                if start > 0 && end + 1 < s.len() as i32 {
+                    if s[(start - 1) as usize] == s[(end + 1) as usize] {
+                        start -= 1;
+                        end += 1;
+                        continue;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            if (end - start) + 1 > result.len() as i32 {
+                result = s[start as usize..=end as usize].iter().collect();
+            }
+        }
+
+        result
+    }
+}
+impl Solution {
+    pub fn unique_paths(m: i32, n: i32) -> i32 {
+        let mut paths = vec![vec![-1; n as usize]; m as usize];
+        for i in paths[(m - 1) as usize].iter_mut() {
+            *i = 1;
+        }
+        for i in 0..paths.len() {
+            let len = paths[i].len();
+            paths[i][len - 1] = 1;
+        }
+        let mut i = m - 2;
+        while i >= 0 {
+            let mut j = n - 2;
+            while j >= 0 {
+                let neighbour1 = paths[i as usize][(j + 1) as usize];
+                let neighbour2 = paths[(i + 1) as usize][j as usize];
+                paths[i as usize][j as usize] = neighbour1 + neighbour2;
+                j -= 1;
+            }
+            i -= 1;
+        }
+        paths[0][0]
+    }
+}
+impl Solution {
+    pub fn build_tree(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Rc<RefCell<TreeNode>>> {
+        
+        Solution::create_node(&preorder, &inorder)
+    }
+    pub fn create_node(
+        preorder: &[i32],
+        inorder: &[i32],
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        if preorder.is_empty(){
+            return None;
+        }
+        let current_node = Rc::new(RefCell::new(TreeNode::new(preorder[0])));
+        let position_of_current=inorder.iter().position(|a|a==&preorder[0]).unwrap(); 
+        let left_child=Solution::create_node(&preorder[1..1+position_of_current], &inorder[0..position_of_current]);
+        let right_child=Solution::create_node(&preorder[1+position_of_current..], &inorder[position_of_current+1..]);
+        current_node.borrow_mut().left=left_child;
+        current_node.borrow_mut().right=right_child;
+        Some(current_node)
+    }
+}
+impl Solution {
+    pub fn max_area(height: Vec<i32>) -> i32 {
+        let mut max_area=0;
+        let mut start=0;
+        let mut end=height.len()-1;
+
+        while start<end{
+            let new_area=(end-start) as i32 *min(height[start], height[end]);
+            if new_area>max_area{
+                max_area=new_area;
+            }
+            if height[start]<height[end]{
+                start+=1;
+
+            }else{
+                end-=1;
+            }
+        }
+        max_area
         
     }
 }
