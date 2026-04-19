@@ -1,6 +1,6 @@
 use std::{
     cmp::{Reverse, max, min},
-    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
+    collections::{BinaryHeap, HashMap, HashSet, VecDeque, binary_heap},
 };
 
 fn main() {
@@ -1070,7 +1070,7 @@ impl Solution {
 }
 impl Solution {
     pub fn coin_change(coins: Vec<i32>, amount: i32) -> i32 {
-        let mut amounts_minimum_coins = vec![amount + 1 ; (amount + 1) as usize];
+        let mut amounts_minimum_coins = vec![amount + 1; (amount + 1) as usize];
         amounts_minimum_coins[0] = 0;
 
         for i in 1..=amount as usize {
@@ -1999,44 +1999,450 @@ impl Solution {
 }
 impl Solution {
     pub fn build_tree(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Rc<RefCell<TreeNode>>> {
-        
         Solution::create_node(&preorder, &inorder)
     }
-    pub fn create_node(
-        preorder: &[i32],
-        inorder: &[i32],
-    ) -> Option<Rc<RefCell<TreeNode>>> {
-        if preorder.is_empty(){
+    pub fn create_node(preorder: &[i32], inorder: &[i32]) -> Option<Rc<RefCell<TreeNode>>> {
+        if preorder.is_empty() {
             return None;
         }
         let current_node = Rc::new(RefCell::new(TreeNode::new(preorder[0])));
-        let position_of_current=inorder.iter().position(|a|a==&preorder[0]).unwrap(); 
-        let left_child=Solution::create_node(&preorder[1..1+position_of_current], &inorder[0..position_of_current]);
-        let right_child=Solution::create_node(&preorder[1+position_of_current..], &inorder[position_of_current+1..]);
-        current_node.borrow_mut().left=left_child;
-        current_node.borrow_mut().right=right_child;
+        let position_of_current = inorder.iter().position(|a| a == &preorder[0]).unwrap();
+        let left_child = Solution::create_node(
+            &preorder[1..1 + position_of_current],
+            &inorder[0..position_of_current],
+        );
+        let right_child = Solution::create_node(
+            &preorder[1 + position_of_current..],
+            &inorder[position_of_current + 1..],
+        );
+        current_node.borrow_mut().left = left_child;
+        current_node.borrow_mut().right = right_child;
         Some(current_node)
     }
 }
 impl Solution {
     pub fn max_area(height: Vec<i32>) -> i32 {
-        let mut max_area=0;
-        let mut start=0;
-        let mut end=height.len()-1;
+        let mut max_area = 0;
+        let mut start = 0;
+        let mut end = height.len() - 1;
 
-        while start<end{
-            let new_area=(end-start) as i32 *min(height[start], height[end]);
-            if new_area>max_area{
-                max_area=new_area;
+        while start < end {
+            let new_area = (end - start) as i32 * min(height[start], height[end]);
+            if new_area > max_area {
+                max_area = new_area;
             }
-            if height[start]<height[end]{
-                start+=1;
-
-            }else{
-                end-=1;
+            if height[start] < height[end] {
+                start += 1;
+            } else {
+                end -= 1;
             }
         }
         max_area
+    }
+}
+impl Solution {
+    pub fn letter_combinations(digits: String) -> Vec<String> {
+        let phone_keyboard = HashMap::from([
+            ("2", vec!["a", "b", "c"]),
+            ("3", vec!["d", "e", "f"]),
+            ("4", vec!["g", "h", "i"]),
+            ("5", vec!["j", "k", "l"]),
+            ("6", vec!["m", "n", "o"]),
+            ("7", vec!["p", "q", "r", "s"]),
+            ("8", vec!["t", "u", "v"]),
+            ("9", vec!["w", "x", "y", "z"]),
+        ]);
+        let mut path = String::new();
+        let mut paths = Vec::new();
+        let keys_pressed: Vec<String> = digits.chars().map(|a| a.to_string()).collect();
+        let letters = phone_keyboard.get(keys_pressed[0].as_str()).unwrap();
+        for letter in letters {
+            Solution::dfs_letter_combs(
+                1,
+                letter,
+                &keys_pressed,
+                &phone_keyboard,
+                &mut path,
+                &mut paths,
+            );
+        }
+        paths
+    }
+    pub fn dfs_letter_combs(
+        index: usize,
+        current_comb: &str,
+        keys_pressed: &[String],
+        phone_keyboard: &HashMap<&str, Vec<&str>>,
+        path: &mut String,
+        paths: &mut Vec<String>,
+    ) {
+        path.push_str(current_comb);
+        if path.len() == keys_pressed.len() {
+            paths.push(path.clone());
+            path.pop();
+            return;
+        }
+        if index >= keys_pressed.len() {
+            return;
+        }
+        let letters = phone_keyboard.get(keys_pressed[index].as_str()).unwrap();
+        for letter in letters {
+            Solution::dfs_letter_combs(
+                index + 1,
+                letter,
+                keys_pressed,
+                phone_keyboard,
+                path,
+                paths,
+            );
+        }
+        path.pop();
+    }
+}
+
+impl Solution {
+    pub fn exist(board: Vec<Vec<char>>, word: String) -> bool {
+        let word = word.chars().collect::<Vec<char>>();
+        let first_char = word[0];
+        let mut board = board;
+        for i in 0..board.len() {
+            for j in 0..board[0].len() {
+                if board[i][j] == first_char
+                    && Solution::word_search_dfs(0, &word, &mut board, i, j)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    pub fn word_search_dfs(
+        index: usize,
+        word: &[char],
+        board: &mut [Vec<char>],
+        row: usize,
+        column: usize,
+    ) -> bool {
+        let previous = board[row][column];
+        board[row][column] = '#';
+        if index == word.len() - 1 {
+            return true;
+        }
+
+        let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+
+        for (row_change, column_change) in directions {
+            let new_row = row as i32 - row_change;
+            let new_column = column as i32 - column_change;
+            if new_row < 0
+                || new_column < 0
+                || new_row as usize >= board.len()
+                || new_column as usize >= board[0].len()
+            {
+                continue;
+            }
+
+            if board[new_row as usize][new_column as usize] == word[index + 1]
+                && Solution::word_search_dfs(
+                    index + 1,
+                    word,
+                    board,
+                    new_row as usize,
+                    new_column as usize,
+                )
+            {
+                return true;
+            }
+        }
+        board[row][column] = previous;
+        false
+    }
+}
+
+impl Solution {
+    pub fn find_anagrams(s: String, p: String) -> Vec<i32> {
+        let mut result = Vec::new();
+        let s_len = s.len();
+        let p_len = p.len();
+        if s_len < p_len {
+            return result;
+        }
+        let mut start = 0;
+        let s: Vec<char> = s.chars().collect();
+        let mut s_count = [0; 26];
+        let p: Vec<char> = p.chars().collect();
+        let mut p_count = [0; 26];
+        for i in 0..p_len {
+            s_count[s[i] as usize - 97] += 1;
+            p_count[p[i] as usize - 97] += 1;
+        }
+
+        while start <= s_len - p_len {
+            let mut matching = true;
+            for i in 0..26 {
+                if s_count[i] != p_count[i] {
+                    matching = false;
+                    break;
+                }
+            }
+            if matching {
+                result.push(start as i32);
+            }
+            s_count[s[start] as usize - 97] -= 1;
+            if start + p_len < s_len {
+                s_count[s[start + p_len] as usize - 97] += 1;
+            }
+
+            start += 1;
+        }
+        result
+    }
+}
+
+impl Solution {
+    pub fn find_min_height_trees(n: i32, edges: Vec<Vec<i32>>) -> Vec<i32> {
+        if n == 1 {
+            return vec![0];
+        }
+        let mut n: usize = n as usize;
+        let mut degrees = vec![0; n];
+        let mut adjacency_list = vec![vec![]; n];
+        for edge in edges {
+            let a = edge[0] as usize;
+            let b = edge[1] as usize;
+            degrees[a] += 1;
+            degrees[b] += 1;
+            adjacency_list[a].push(b);
+            adjacency_list[b].push(a);
+        }
+        let mut result = Vec::new();
+        let mut traversal_list = VecDeque::new();
+        for (index, degree) in degrees.iter().enumerate() {
+            if degree == &1 {
+                traversal_list.push_back(index);
+            }
+        }
+        while !traversal_list.is_empty() {
+            if n <= 2 {
+                result.extend(traversal_list.iter().map(|a| *a as i32));
+                return result;
+            }
+            let length = traversal_list.len();
+            n -= length;
+            for _ in 0..length {
+                let node = traversal_list.pop_front().unwrap();
+                degrees[node] -= 1;
+                for neighbour in adjacency_list[node].iter() {
+                    degrees[*neighbour] -= 1;
+                    if degrees[*neighbour] == 1 {
+                        traversal_list.push_back(*neighbour);
+                    }
+                }
+            }
+        }
+        result
+    }
+}
+
+impl Solution {
+    pub fn least_interval_naive_approach(tasks: Vec<char>, n: i32) -> i32 {
+        let n = n as usize;
+        let mut frequency = HashMap::new();
+
+        for task in tasks {
+            frequency.entry(task).and_modify(|a| *a += 1).or_insert(1);
+        }
+        let mut priority_queue = BinaryHeap::new();
+        for (letter, count) in frequency {
+            priority_queue.push(Task {
+                frequency: count,
+                time_back_in_cycle: 0,
+            });
+        }
+        let mut waiting = Vec::new();
+        let mut global_time = 0;
+
+        while !priority_queue.is_empty() {
+            let mut found_item_for_cycle = false;
+            while !found_item_for_cycle {
+                if let Some(top) = priority_queue.pop() {
+                    if top.time_back_in_cycle <= global_time {
+                        found_item_for_cycle = true;
+                        let mut task = top;
+                        task.frequency -= 1;
+                        task.time_back_in_cycle = global_time + n + 1;
+                        if task.frequency > 0 {
+                            waiting.push(task);
+                        }
+                    } else {
+                        waiting.push(top);
+                    }
+                } else {
+                    break;
+                }
+            }
+            while let Some(item) = waiting.pop() {
+                priority_queue.push(item);
+            }
+            global_time += 1;
+        }
+        global_time as i32
+    }
+}
+
+impl Solution {
+    pub fn least_interval_neet_code(tasks: Vec<char>, n: i32) -> i32 {
+        let mut frequency = HashMap::new();
+
+        for task in tasks {
+            frequency.entry(task).and_modify(|a| *a += 1).or_insert(1);
+        }
+        let mut priority_queue = BinaryHeap::new();
+        for (_, count) in frequency {
+            priority_queue.push(count);
+        }
+        let mut waiting: VecDeque<(i32, i32)> = VecDeque::new();
+        let mut global_time: i32 = 0;
+
+        while !waiting.is_empty() || !priority_queue.is_empty() {
+            if let Some(top) = priority_queue.pop() {
+                let new_count = top - 1;
+                if new_count > 0 {
+                    waiting.push_back((new_count, global_time + n + 1));
+                }
+            }
+
+            global_time += 1;
+            if !waiting.is_empty() && waiting[0].1 <= global_time {
+                priority_queue.push(waiting.pop_front().unwrap().0);
+            }
+        }
+        global_time
+    }
+}
+impl Solution {
+    pub fn least_interval(tasks: Vec<char>, n: i32) -> i32 {
+        let mut frequency = HashMap::new();
+        let tasks_len=tasks.len();
+
+        for task in tasks {
+            frequency.entry(task).and_modify(|a| *a += 1).or_insert(1);
+        }
+        let mut priority_queue = BinaryHeap::new();
+        for (_, count) in frequency {
+            priority_queue.push(count);
+        }
+        let mut global_time=0;
+        let x=match priority_queue.pop(){
+            Some(top) => {top},
+            None => {
+                return global_time;
+            },
+        };
+        let mut s=1;
+        while let Some(top)=priority_queue.pop(){
+            if top==x{
+                s+=1;
+
+            }else{
+                break;
+            }
+        }
+        global_time=(x-1)*(n+1)+s;
+        max(global_time,tasks_len as i32)
+    }
+}
+struct Task {
+    frequency: usize,
+    time_back_in_cycle: usize,
+}
+impl PartialEq for Task {
+    fn eq(&self, other: &Self) -> bool {
+        self.frequency == other.frequency
+    }
+}
+impl Eq for Task {}
+impl Ord for Task {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.frequency.cmp(&other.frequency)
+    }
+}
+impl PartialOrd for Task {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+        //
+        // self.frequency.partial_cmp(&other.frequency)
+    }
+}
+struct LRUCache<'a> {
+    head:Node,
+    tail:Node,
+    items:HashMap<i32,&'a mut Node>
+
+}
+
+
+/** 
+ * `&self` means the method takes an immutable reference.
+ * If you need a mutable reference, change it to `&mut self` instead.
+ */
+impl<'a> LRUCache<'a> {
+
+    fn new(capacity: i32) -> Self {
+        Self { head:}
         
     }
+    
+    fn get(&self, key: i32) -> i32 {
+        match self.positions.get(&key){
+            Some(pos) => {
+                self.content[*pos]
+                
+            },
+            None => {
+                -1
+            },
+        }
+        
+    }
+    
+    fn put(&mut self, key: i32, value: i32) {
+        if self.positions.contains_key(&key){
+            let ref_pos=self.positions.get(&key).unwrap();
+            self.content[*ref_pos]=value;
+        }else{
+
+        }
+        
+    }
+}
+struct Data{
+    last_used:Reverse<i32>,
+    position_in_array:usize,
+    key:i32
+}
+
+impl PartialEq for Data{
+    fn eq(&self, other: &Self) -> bool {
+        self.last_used == other.last_used 
+    }
+}
+impl Eq for Data{}
+impl Ord for Data{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.last_used.cmp(&other.last_used)
+    }
+}
+impl PartialOrd for Data{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        
+        Some(self.cmp(other))
+    }
+}
+
+struct Node{
+    key:i32,
+    val:i32,
+    prev:Box<Node>,
+    next:Box<Node>
 }
